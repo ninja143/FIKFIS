@@ -4,31 +4,49 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <title>Laravel</title>
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,600&display=swap" rel="stylesheet" />
-
-    <!-- Styles -->
+    <title>Welcome to FIKFIS Services</title>
     <style>
-        /* * * * * General CSS * * * * */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-        }
-
         body {
+            font-family: Arial, sans-serif;
             margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 16px;
-            font-weight: 400;
-            color: #666666;
-            background: #eaeff4;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
         }
-
+        .welcome-container {
+            text-align: center;
+            background-color: #fff;
+            padding: 50px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 3em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        p {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: #34495e;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #3498db;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
         .wrapper {
             margin: 0 auto;
             width: 100%;
@@ -142,123 +160,14 @@
             color: #44c7f5;
             box-shadow: inset 150px 0 0 0 #ffffff;
         }
-
-        .login-form {
-            position: relative;
-            width: 100%;
-        }
-
-        .login-form h2 {
-            margin: 0 0 15px 0;
-            font-size: 22px;
-            font-weight: 700;
-        }
-
-        .login-form p {
-            margin: 0 0 10px 0;
-            text-align: left;
-            color: #666666;
-            font-size: 15px;
-        }
-
-        .login-form p:last-child {
-            margin: 0;
-            padding-top: 3px;
-        }
-
-        .login-form p a {
-            color: #44c7f5;
-            font-size: 14px;
-            text-decoration: none;
-        }
-
-        .login-form label {
-            display: block;
-            width: 100%;
-            margin-bottom: 2px;
-            letter-spacing: .5px;
-        }
-
-        .login-form p:last-child label {
-            width: 60%;
-            float: left;
-        }
-
-        .login-form label span {
-            color: #ff574e;
-            padding-left: 2px;
-        }
-
-        .login-form input {
-            display: block;
-            width: 100%;
-            height: 35px;
-            padding: 0 10px;
-            outline: none;
-            border: 1px solid #cccccc;
-            border-radius: 30px;
-        }
-
-        .login-form input:focus {
-            border-color: #ff574e;
-        }
-
-        .login-form button,
-        .login-form input[type=submit] {
-            display: inline-block;
-            width: 100%;
-            margin-top: 5px;
-            color: #44c7f5;
-            font-size: 16px;
-            letter-spacing: 1px;
-            cursor: pointer;
-            background: transparent;
-            border: 1px solid #44c7f5;
-            border-radius: 30px;
-            box-shadow: inset 0 0 0 0 #44c7f5;
-            transition: .3s;
-            -webkit-transition: .3s;
-        }
-
-        .login-form button:hover,
-        .login-form input[type=submit]:hover {
-            color: #ffffff;
-            box-shadow: inset 250px 0 0 0 #44c7f5;
-        }
     </style>
 </head>
-
-<body class="font-sans antialiased dark:bg-black dark:text-white/50">
+<body>
     <div class="wrapper">
-        <div class="container">
-            <div class="col-left">
-                <div class="login-text">
-                    <h2>Welcome Back</h2>
-                    <p>Admin Portal</p>
-                    <!-- <a class="btn" href="">Sign Up</a> -->
-                </div>
-            </div>
-            <div class="col-right">
-                <div class="login-form">
-                    <h2>Login</h2>
-                    <form>
-                        <p>
-                            <label>Username or email address<span>*</span></label>
-                            <input type="text" placeholder="Username or Email" required>
-                        </p>
-                        <p>
-                            <label>Password<span>*</span></label>
-                            <input type="password" placeholder="Password" required>
-                        </p>
-                        <p>
-                            <input type="submit" value="Sing In" />
-                        </p>
-                        <p>
-                            <a href="">Forget Password?</a>
-                        </p>
-                    </form>
-                </div>
-            </div>
+        <div class="welcome-container">
+            <h1>Welcome to FIKFIS Services!</h1>
+            <p>We are delighted to have you with us. Our team is dedicated to providing top-notch service.</p>
+            <a href="#" class="button">Learn More</a>
         </div>
         <div class="credit">
             <footer class="py-16 text-center text-sm text-black dark:text-white/70">
@@ -286,5 +195,4 @@
         </div>
     </div>
 </body>
-
 </html>

@@ -13,18 +13,36 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
+            $table->string('username', 128)->unique();
+            $table->string('name', 256)->nullable();;
+            $table->string('first_name', 128)->nullable();
+            $table->string('last_name', 128)->nullable();
+            $table->string('email')->unique()->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('phone')->unique()->nullable();
+            $table->timestamp('phone_verified_at')->nullable();
+            $table->enum('gender', ['male', 'female', 'non-binary', 'other', 'prefer_not_to_say'])->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->boolean('accept_terms')->default(false);
+            $table->string('device_token')->nullable();
+            $table->string('fcm_token')->nullable();
             $table->string('password');
+            $table->enum('status', ['active', 'inactive', 'blocked', 'deactivated'])->default('active');
             $table->rememberToken();
             $table->timestamps();
+
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('token');
-            $table->timestamp('created_at')->nullable();
+            $table->enum('type', ['phone', 'email']);
+            $table->timestamp('expires_at');
+            $table->timestamps();
+            
+            $table->index('token');
+            $table->index('user_id');
         });
 
         Schema::create('sessions', function (Blueprint $table) {
