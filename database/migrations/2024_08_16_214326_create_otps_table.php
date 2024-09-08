@@ -17,6 +17,8 @@ return new class extends Migration
             $table->timestamp('expires_at'); // Expiry time
             $table->enum('contact_type', ['email', 'phone'])->nullable();
             $table->string('contact_value'); // Email or phone number
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key to users table
+            $table->enum('device_type', ['ios', 'android', 'web', 'other']);
             $table->enum('invoked', [0, 1])->default(0);
             $table->timestamps();
         });

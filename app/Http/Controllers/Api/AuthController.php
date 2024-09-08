@@ -10,10 +10,10 @@ use App\Models\PasswordResetToken;
 
 # App Helpers
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\DB;
 use Validator;
 use Carbon\Carbon;
@@ -77,13 +77,14 @@ class AuthController extends Controller
                 $otp = MyHelper::generateOtp( env('OTP_STR_LENGTH', 6),  env('OTP_DIGITS_LENGTH', 6));
                 
                 // Send OTP
-                if($request->type === Constants::CONTACT_TYPE_EMAIL) {
-                    $result = $this->sendEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
-                }
+                // if($request->type === Constants::CONTACT_TYPE_EMAIL) {
+                //     $result = $this->sendEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
+                // }
 
-                if($request->type === Constants::CONTACT_TYPE_PHONE) {
-                    $result = $this->sendPhoneOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
-                }
+                // if($request->type === Constants::CONTACT_TYPE_PHONE) {
+                //     $result = $this->sendPhoneOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
+                // }
+                $result['status'] = true;
 
                 $setResult = [
                     'username' => $request->username,
@@ -127,8 +128,9 @@ class AuthController extends Controller
                                 'max:255',
                                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
                             ],
-                'device_token' => 'nullable|string|max:255',
-                'fcm_token' => 'nullable|string|max:255'
+                'device_type' => ['required', 'string', 'in:ios,android,web,other'],
+                'device_token' => 'string|max:255',
+                'fcm_token' => 'string|max:255'
             ]);
 
             if ($validator->fails()) {
@@ -141,16 +143,17 @@ class AuthController extends Controller
             // username check
             $isUsernameExist = $this->isUsernameExist($request->username);
             if(!$isUsernameExist) {
-                // Send OTP
-                if($request->type === Constants::CONTACT_TYPE_EMAIL) {
-                    $result = $this->sendEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
-                }
+                // Verify OTP
+                // if($request->type === Constants::CONTACT_TYPE_EMAIL) {
+                //     $result = $this->verifyEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
+                // }
 
-                if($request->type === Constants::CONTACT_TYPE_PHONE) {
-                    // $result = $this->verifyPhoneOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
-                    $result = $this->verifyPhoneOtp($request->username, $request->otp);
-                }
-                
+                // if($request->type === Constants::CONTACT_TYPE_PHONE) {
+                //     // $result = $this->verifyPhoneOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
+                //     $result = $this->verifyPhoneOtp($request->username, $request->otp);
+                // }
+                $result['status'] = true;
+                $result['message'] = 'approved';
                 if($result['status'] == true || 1) {
                     if($result['message'] == 'approved' || 1) {
                         // return response()->json(['message' => 'OTP verified successfully.', ], 201);
@@ -160,6 +163,7 @@ class AuthController extends Controller
                             'email' => $request->type === Constants::CONTACT_TYPE_EMAIL ? $request->username : null,
                             'phone' => $request->type === Constants::CONTACT_TYPE_PHONE ? $request->username : null,
                             'password' => Hash::make($request->password),
+                            'device_type' => $request->device_type,
                             'device_token' => $request->device_token,
                             'fcm_token' => $request->fcm_token,
                         ]);
@@ -173,8 +177,14 @@ class AuthController extends Controller
                         }
                         
                         if ($user->save()) {
-                            $tokenResult = $user->createToken('Personal Access Token');
-                            $token = $tokenResult->plainTextToken;
+                            $user->update([ 'remember_token' =>$request->remember_me ]);
+
+                            // $tokenResult = $user->createToken('Personal Access Token For User');
+                            $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
+                            $rtExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.refresh')) ? (int) config('sanctum.expiry.refresh') : 0);
+
+                            $accessToken = $user->createToken('access_token', [], $atExpireTime);
+                            $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
                             
                             // Commit the transaction if all operations succeed
                             DB::commit();
@@ -182,8 +192,12 @@ class AuthController extends Controller
                             // Return 
                             return response()->json([
                                 'message' => 'Successfully created user !',
-                                'accessToken' => $token,
-                            ], 201);
+                                'result' => [
+                                    'access_token' => $accessToken->plainTextToken,
+                                    'refresh_token' => $refreshToken->plainTextToken,
+                                    'token_type' => 'Bearer',
+                                ]
+                            ]);
                         } else {
                             return response()->json(['error' => 'Provide unique details'], 400);
                         }
@@ -242,13 +256,18 @@ class AuthController extends Controller
         // $user = $request->user();
 
         // Update some fields in the user table
-         $user->update([ 'remember_token' =>$request->remember_me ]);
+        $user->update([ 'remember_token' =>$request->remember_me ]);
 
-        $tokenResult = $user->createToken('Personal Access Token For User');
-        $token = $tokenResult->plainTextToken;
+        // $tokenResult = $user->createToken('Personal Access Token For User');
+        $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
+        $rtExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.refresh')) ? (int) config('sanctum.expiry.refresh') : 0);
+
+        $accessToken = $user->createToken('access_token', [], $atExpireTime);
+        $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
 
         return response()->json([
-            'accessToken' => $token,
+            'access_token' => $accessToken->plainTextToken,
+            'refresh_token' => $refreshToken->plainTextToken,
             'token_type' => 'Bearer',
         ]);
     }
@@ -266,7 +285,6 @@ class AuthController extends Controller
     public function update(Request $request)
     {
         // Validate the request
-
         $validator = Validator::make($request->all(), [
             'gender' => ['nullable', 'string', 'in:male,female,non-binary,other,prefer_not_to_say'],
             'name' => ['nullable', 'string', 'max:255'],
@@ -318,7 +336,7 @@ class AuthController extends Controller
     }
 
     /**
-        * Logout user (Revoke the token)
+        * Logout user (Invoke the token)
         *
         * @return [string] message
     */
@@ -334,7 +352,6 @@ class AuthController extends Controller
 
     private function sendEmailOtp($email, $otp, $expiryMinutes)
     {
-        DB::beginTransaction();
         try {
             // OTP Expiry
             $expiresAt = Carbon::now()->addMinutes(is_numeric($expiryMinutes) ? (int) $expiryMinutes : 0); // OTP expiry time
@@ -346,7 +363,7 @@ class AuthController extends Controller
                 'expires_at' => $expiresAt,
                 'contact_type' => Constants::CONTACT_TYPE_EMAIL,
                 'contact_value' => $email,
-                'revoked' => Constants::NON_REVOKED,
+                'invoked' => Constants::NOT_INVOKED,
             ]);
 
             // Send OTP
@@ -358,7 +375,6 @@ class AuthController extends Controller
                 return [ 'status' => false, 'otp' => [] ]; 
             }
         } catch (\Exception $e) {
-            DB::rollback();
             return [ 'status' => false, 'message' => $e->getMessage(), 'otp' => [] ]; 
         }
     }
@@ -387,7 +403,7 @@ class AuthController extends Controller
                     'expires_at' => $expiresAt,
                     'contact_type' => Constants::CONTACT_TYPE_PHONE,
                     'contact_value' => $phone,
-                    'revoked' => Constants::NON_REVOKED,
+                    'invoked' => Constants::NOT_INVOKED,
                 ]);
                 
                 // Send OTP
@@ -405,14 +421,14 @@ class AuthController extends Controller
         
         try {
             // Send OTP
-            $result = $this->smsService->sendOtp($phone);
-            return [ 'status' => true, 'message' =>$result ];     
-        } catch (Exception $e) {
+            // $result = $this->smsService->sendOtp($phone);
+            return [ 'status' => true, 'message' => "Please enter 123456" ];     
+        } catch (Exception $e) { 
             return [ 'status' => false, 'message' => $e->getMessage(), 'otp' => [] ]; 
         }
     }
 
-    public function verifyPhoneOtp($phone, $otp) {
+    private function verifyPhoneOtp($phone, $otp) {
         try {
             // Send OTP
             $result = $this->smsService->verifyOtp($phone, $otp);
@@ -422,4 +438,141 @@ class AuthController extends Controller
         }
     }
 
+    public function sendPasswordOTP(Request $request){
+        DB::beginTransaction();
+        try {
+            // Validate Inputs
+            $validator = Validator::make($request->all(), [
+                'type' => 'required|in:email,phone',
+                'username' => [ 'required', new ValidUsername]
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $validator->errors(),
+                ], 422);
+            }
+
+            // username check
+            $isUsernameExist = $this->isUsernameExist($request->username);
+            if($isUsernameExist) {
+                // Generate OTP
+                $otp = MyHelper::generateOtp( env('OTP_STR_LENGTH', 6),  env('OTP_DIGITS_LENGTH', 6));
+                
+                // Send OTP
+                if($request->type === Constants::CONTACT_TYPE_EMAIL) {
+                    $result = $this->sendEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
+                }
+
+                if($request->type === Constants::CONTACT_TYPE_PHONE) {
+                    $result = $this->sendPhoneOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
+                }
+
+                $setResult = [
+                    'username' => $request->username,
+                    'expiry_time' => $result['status'] ? env('OTP_EXPITY_MINUTES', 10). ' minutes' : ''
+                ];
+                if($result['status']) {
+                    return response()->json(['message' => 'OTP sent successfully.', 'result' => $setResult ], 201);
+                } else {
+                    return response()->json(['message' => 'Unable to send otp. please contact admin.', 'result' => $setResult ], 201);
+                }
+            } else {
+                return response()->json([
+                    'message' => 'Account does not exist with this '.($request->type === Constants::CONTACT_TYPE_EMAIL? 'email':'phone'),
+                    'result' => $request->input()
+                ], 400);
+            }
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function changePassword(Request $request){
+        DB::beginTransaction();
+        try {
+            // Validate Inputs
+            $validator = Validator::make($request->all(), [
+                'password' => [
+                                'required',
+                                'string',
+                                'min:8',
+                                'max:255',
+                                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
+                            ]
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $validator->errors(),
+                ], 422);
+            }
+
+
+            $user = Auth::user();
+            $user->updatePassword($request->password);
+
+            DB::commit();
+            return response()->json(['message' => 'Password changed successfully.', 'result' => [] ], 200);
+
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function refreshToken(Request $request) {
+        // Validate Inputs
+        $validator = Validator::make($request->all(), [
+            'refresh_token' => ['required', 'string', 'min:48', 'max:50']
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([ 'status' => 'error', 'message' => $validator->errors() ], 422);
+        }
+
+        // $token = '3|ozN4wlvYfj0rrtijDzst55ZYX2Lxf1zJXUeQNLjWb0147a94';
+        // $tokenInfo = PersonalAccessToken::findToken($token);
+        // dd($tokenInfo->expires_at);
+
+        $refreshToken = $request->input('refresh_token');
+        $token = PersonalAccessToken::findToken($refreshToken);
+        if($token && !$token->expires_at->isPast()) {
+            $user = $token->tokenable;
+
+            // Revoke the old refresh token to prevent its reuse
+            $token->delete();
+
+            // Create a new refresh token with a new expiry time
+            $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
+            $rtExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.refresh')) ? (int) config('sanctum.expiry.refresh') : 0);
+
+            $accessToken = $user->createToken('access_token', ["*"], $atExpireTime);
+            $newRefreshToken = $user->createToken('refresh_token', ["*"], $rtExpireTime);
+
+            return response()->json([
+                'access_token' => $accessToken->plainTextToken,
+                'refresh_token' => $newRefreshToken->plainTextToken,
+                'token_type' => 'Bearer',
+            ]);
+        } else {
+            return response()->json([
+                'error' => 'Token is expired !',
+            ], 422);
+        }
+        
+
+        return response()->json(['error' => 'Invalid refresh token'], 401);
+    }
 }

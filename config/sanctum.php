@@ -47,8 +47,13 @@ return [
     |
     */
 
-    'expiration' => 3 * 24 * 60,
+    'expiration' => 4320,
 
+    'expiry' => [
+        'access' => env('ACCESS_TOKEN_EXPIRATION_TIME', 4320), // 3 day (minutes)
+        'refresh' => env('REFRESH_TOKEN_EXPIRATION_TIME', 43200), // 30 days (minutes)
+    ],
+    
     /*
     |--------------------------------------------------------------------------
     | Token Prefix

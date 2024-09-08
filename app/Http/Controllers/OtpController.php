@@ -4,15 +4,15 @@ namespace App\Http\Controllers;
 
 namespace App\Http\Controllers;
 
-# App Helper 
-use App\Models\User;
-use App\Models\PasswordResetToken;
+# App Helpers 
 use Illuminate\Http\Request;
 use Validator;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
+use Exception;
+
 
 # Constant
 use App\Constants\Constants;
@@ -22,11 +22,15 @@ use App\Helpers\MyHelper;
 
 # Models
 use App\Models\Otp;
+use App\Models\User;
+use App\Models\PasswordResetToken;
 
 # Service Provider
 use App\Services\MailService;
 use App\Services\SmsService;
-use phpDocumentor\Reflection\Types\Boolean;
+
+# Validator Rules
+use App\Rules\ValidUsername;
 
 class OtpController extends Controller
 {
@@ -48,25 +52,9 @@ class OtpController extends Controller
             // Validate Inputs
             $validator = Validator::make($request->all(), [
                 'contact_type' => 'required|in:email,phone',
-                'contact_value' => [
-                    'required',
-                    function ($attribute, $value, $fail) use ($request) {
-                        $contactType = $request->input('contact_type');
-            
-                        if ($contactType === 'email') {
-                            if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                                $fail('The ' . $attribute . ' must be a valid email address.');
-                            }
-                        } elseif ($contactType === 'phone') {
-                            // Basic phone validation (you can customize this)
-                            $phonePattern = '/^(?:\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/';
-                            if (!preg_match($phonePattern, $value)) {
-                                $fail('The ' . $attribute . ' must be a valid UK phone number.');
-                            }
-                        }
-                    }
-                ],
-                'username_exist' => 'required|boolean'
+                'contact_value' => [ 'required', new ValidUsername],
+                'username_exist' => 'required|boolean',
+                'device_type' => ['nullable', 'string', 'in:ios,android,web,other'],
             ]);
 
             if ($validator->fails()) {
@@ -79,33 +67,54 @@ class OtpController extends Controller
             // username check
             if($request->username_exist) {
                 $isUsernameExist = $this->isUsernameExist($request->contact_value);
+                if (!$isUsernameExist) {
+                    return response()->json(['message' => 'Username does not exist in our database'], 400);
+                }
             }
-
+            
             // Allowed Logic
             $allowedSending = (($request->username_exist && $isUsernameExist) || (!$request->username_exist)) ? true : false;
 
             if($allowedSending) {
                 // Generate OTP
-                $otp = MyHelper::generateOtp(2, 6);
+                $otpArr = MyHelper::generateOtp(0, 6);
                 $expiresAt = Carbon::now()->addMinutes(10); // OTP expiry time
                 
                 // Save OTP
-                $otp = new Otp([
-                    // 'otp' => implode("-", $otp),
-                    'otp' => 'AB-123456',
+                $resultObj = [
+                    // 'otp' => implode("-", $otpArr),
                     'expires_at' => $expiresAt,
                     'contact_type' => $request->contact_type,
                     'contact_value' => $request->contact_value,
-                ]);
+                    'device_type' => $request->device_type
+                ];
 
+                if ($request->username_exist) {
+                    $user = User::where('username', $request->contact_value)->first();
+                    // return error if not found 
+                    $otp= new Otp([
+                        'otp' => '123456',
+                        ...$resultObj,
+                        'user_id' => $user->id
+                    ]);
+                } else {
+                    $otp= new Otp([
+                        'otp' => '123456',
+                        ...$resultObj
+                    ]);
+                }
+                
                 // Send OTP
-                if($otp->save()) {
+                if( $otp->save() ) {
+                    DB::commit();
+
+                    $resultObj['verfication_id'] =  MyHelper::encrypt($otp->id. '_'. $request->username_exist);
                     if ($request->contact_type == Constants::CONTACT_TYPE_PHONE) {
                         // $this->smsService->sendOtp( $request->contact_value,  $otp['otp']);
-                        return response()->json(['message' => 'OTP sent successfully.', 'result' => $otp ], 201);
+                        return response()->json(['message' => 'OTP sent successfully.', 'result' =>  $resultObj ], 201);
                     } elseif ($request->contact_type == Constants::CONTACT_TYPE_EMAIL) {
                         // $this->mailService->sendOtp( $request->contact_value,  $otp['otp']);
-                        return response()->json(['message' => 'OTP sent successfully.', 'result' => $otp ], 201);
+                        return response()->json(['message' => 'OTP sent successfully.', 'result' =>  $resultObj ], 201);
                     } else {
                         return response()->json(['message' => 'OTP couldn\'t sent due to some technical reason, please contact on support.'], 400);
                     }
@@ -117,7 +126,7 @@ class OtpController extends Controller
                 return response()->json(['message' => 'OTP can\'t be sent. Please contact admin.'], 422);
             }
                 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
             return response()->json([
                 'status' => false,
@@ -127,20 +136,26 @@ class OtpController extends Controller
     }
 
     public function isUsernameExist($username): bool {
-        return User::where('username', $username)->count() > 0 ? true : false; 
+        return User::where('username', $username)->count() > 0 ? true : false;
     }
 
     public function verifyOtp(Request $request)
     {
         $request->validate([
+            'varification_id' => 'required|string|max:256',
             'contact_type' => 'required|in:email,phone',
             'contact_value' => 'required|string',
             'otp' => 'required|string',
         ]);
 
-        $otpRecord = Otp::where('contact_type', $request->contact_type)
+        // Get otp id and is username check
+        [$otp_id, $isUsernameExist] = [...explode('_', MyHelper::decrypt($request->varification_id))];
+
+        $otpRecord = Otp::find($otp_id)
+                        ->where('contact_type', $request->contact_type)
                         ->where('contact_value', $request->contact_value)
                         ->where('otp', $request->otp)
+                        ->where('invoked', Constants::NOT_INVOKED)
                         ->where('expires_at', '>', Carbon::now())
                         ->first();
 
@@ -150,10 +165,65 @@ class OtpController extends Controller
 
         // OTP is valid
         // You may want to delete the OTP record after successful verification
-        $otpRecord->delete();
+        $otpRecord->invoke();
 
-        return response()->json(['message' => 'OTP verified successfully.']);
+        return response()->json(['result' => [
+            'message' => 'Verified successfully !',
+            'verification_id' => $request->varification_id
+        ]]);
     }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'varification_id' => 'required|string|max:256',
+            'contact_type' => 'required|in:email,phone',
+            'contact_value' => 'required|string',
+            'password' => [
+                                'required',
+                                'string',
+                                'min:8',
+                                'max:255',
+                                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/',
+                                'confirmed'
+                            ],
+        ]);
+        
+        // Get otp id and is username check
+        [$otp_id, $isUsernameExistCheck] = [...explode('_', MyHelper::decrypt($request->varification_id))];
+
+        $otpRecord = Otp::find($otp_id);
+
+        if (!$otpRecord) {
+            return response()->json(['message' => 'Invalid or expired OTP.'], 400);
+        }
+
+        // username check
+        $isUsernameExist = false; 
+        if ($isUsernameExistCheck) {
+            $isUsernameExist = $this->isUsernameExist($request->contact_value);
+            if (!$isUsernameExist) {
+                return response()->json(['message' => 'User record does not exist in our database'], 400);
+            }
+        }
+
+        if ($isUsernameExistCheck) {
+            $user = User::find($otpRecord->user_id)->first();
+            // return error if not found 
+            $user->updatePassword($request->password);
+        } else {
+            $user = User::where('username', $request->contact_value)->first();
+            // return error if not found 
+            $user->updatePassword($request->password);
+        }
+       
+        // OTP invking 
+        $otpRecord = Otp::find($otp_id)->delete();
+
+        return response()->json(['message' => 'Password set successfully !'], 400);
+    }
+
+    
 
     public function sendOtp1(Request $request)
     {

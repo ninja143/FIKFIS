@@ -1,7 +1,10 @@
 <?php 
 
 namespace App\Helpers;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Exception;
 
 class MyHelper
 {
@@ -41,6 +44,40 @@ class MyHelper
 
     function trimAll($string) {
         return trim(preg_replace('/\s+/', ' ', $string));
+    }
+
+    public static function encrypt($data)
+    {
+        $salt = Str::random(16); // Generate a random salt
+
+        // Prepend and append the salt to the data
+        $saltedData = $salt .'|'. $data .'|'. $salt;
+
+        return Crypt::encrypt($saltedData);
+    }
+
+    public static function decrypt($encryptedData)
+    {
+        $decryptedData = Crypt::decrypt($encryptedData);
+
+        // Extract the original data using explode()
+        $parts = explode('|', $decryptedData);
+
+        if (count($parts) !== 3) {
+            // Invalid format
+            throw new InvalidArgumentException('Invalid encrypted data format');
+        }
+
+        $salt = $parts[0];
+        $originalData = $parts[1];
+        $salt2 = $parts[2];
+
+        // Verify that the salts match
+        if ($salt !== $salt2) {
+            throw new InvalidArgumentException('Invalid encrypted data salt');
+        }
+
+        return $originalData;
     }
 }
 

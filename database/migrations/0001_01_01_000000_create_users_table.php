@@ -24,6 +24,7 @@ return new class extends Migration
             $table->enum('gender', ['male', 'female', 'non-binary', 'other', 'prefer_not_to_say'])->nullable();
             $table->date('date_of_birth')->nullable();
             $table->boolean('accept_terms')->default(false);
+            $table->string('device_type')->default('other');
             $table->string('device_token')->nullable();
             $table->string('fcm_token')->nullable();
             $table->string('password');

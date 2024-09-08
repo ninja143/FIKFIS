@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -23,7 +24,8 @@ class User extends Authenticatable // implements MustVerifyEmail
         'username', 'name', 'first_name', 'last_name', 'email', 
         'email_verification_code', 'email_verified_at', 'phone',
         'phone_verification_code', 'phone_verified_at', 'gender', 
-        'date_of_birth', 'accept_terms', 'device_token', 'fcm_token', 'password',
+        'date_of_birth', 'accept_terms', 'device_type', 'device_token',
+        'fcm_token', 'password',
     ];
 
     /**
@@ -92,5 +94,11 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function sessions(): HasMany
     {
         return $this->hasMany(Session::class);
+    }
+
+    public function updatePassword($new_password)
+    {
+        $this->password = Hash::make($new_password);
+        $this->save();
     }
 }
