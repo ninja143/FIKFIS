@@ -193,7 +193,8 @@ class AuthController extends Controller
                             return response()->json([
                                 'message' => 'Successfully created user !',
                                 'result' => [
-                                    'access_token' => $accessToken->plainTextToken,
+                                    'profile' => $user->only(['username', 'name', 'email', 'phone']),
+                                    'access_token' => $accessToken,
                                     'refresh_token' => $refreshToken->plainTextToken,
                                     'token_type' => 'Bearer',
                                 ]
@@ -216,7 +217,7 @@ class AuthController extends Controller
             }
 
         } catch (\Exception $e) {
-            Log::error('Failed to create user', ['error' => $e->getMessage()]);
+            Log::error('Error: Failed to create user', ['error' => $e->getMessage()]);
             
             DB::rollback();
             return response()->json([
@@ -237,39 +238,57 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $request->validate([
-            'username' => ['required', 'string', new ValidUsername],
-            'password' => 'required|string|min:8',
-            'remember_me' => 'boolean'
-        ]);
+        DB::beginTransaction();
+        try {
+            $request->validate([
+                'username' => ['required', 'string', new ValidUsername],
+                'password' => 'required|string|min:8',
+                'device_token' => ['nullable', 'string', 'max:255'],
+                'fcm_token' => ['nullable', 'string', 'max:255'],
+                'remember_me' => 'boolean'
+            ]);
 
-        $credentials = request(['username', 'password']);
-        
-        if (!Auth::attempt($credentials)) {
+            $credentials = request(['username', 'password']);
+            
+            if (!Auth::attempt($credentials)) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Get the authenticated user
+            $user = Auth::user();
+            // $user = $request->user();
+
+            // Update some fields in the user table
+            $user->update([ 'remember_token' =>$request->remember_me, "device_token" => $request->device_token ]);
+
+            // $tokenResult = $user->createToken('Personal Access Token For User');
+            $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
+            $rtExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.refresh')) ? (int) config('sanctum.expiry.refresh') : 0);
+
+            $accessToken = $user->createToken('access_token', [], $atExpireTime);
+            $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
+
+            DB::commit();
             return response()->json([
-                'message' => 'Unauthorized'
-            ], 401);
+                'message' => 'logged-in successfully !',
+                'result' => [
+                    'access_token' => $accessToken->plainTextToken,
+                    'refresh_token' => $refreshToken->plainTextToken,
+                    'token_type' => 'Bearer'
+                ]
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Error: Failed to login', ['error' => $e->getMessage()]);
+            
+            DB::rollback();
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // Get the authenticated user
-        $user = Auth::user();
-        // $user = $request->user();
-
-        // Update some fields in the user table
-        $user->update([ 'remember_token' =>$request->remember_me ]);
-
-        // $tokenResult = $user->createToken('Personal Access Token For User');
-        $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
-        $rtExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.refresh')) ? (int) config('sanctum.expiry.refresh') : 0);
-
-        $accessToken = $user->createToken('access_token', [], $atExpireTime);
-        $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
-
-        return response()->json([
-            'access_token' => $accessToken->plainTextToken,
-            'refresh_token' => $refreshToken->plainTextToken,
-            'token_type' => 'Bearer',
-        ]);
+            
     }
 
     /**

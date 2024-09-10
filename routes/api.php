@@ -62,14 +62,14 @@ Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handle']);
 // Route::group(['prefix' => 'category'], function () {
 //   Route::get('list', [ProductCategoryCTRL::class, 'index'])->middleware(['auth:sanctum'])->name('category.list');
 // });
-Route::controller(AliExpressCTRL::class)
-  // ->middleware(['auth:sanctum'])
-  ->prefix('category')
-  ->group(function () {
+// Route::controller(AliExpressCTRL::class)
+//   // ->middleware(['auth:sanctum'])
+//   ->prefix('category')
+//   ->group(function () {
 
-    // List categories 
-    Route::get('list', 'index')->name('category.list');
-});
+//     // List categories 
+//     Route::get('list', 'index')->name('category.list');
+// });
 
 
 
