@@ -217,7 +217,7 @@ class OtpController extends Controller
         // OTP invking 
         $otpRecord = Otp::find($otp_id)->delete();
 
-        return response()->json(['message' => 'Password set successfully !'], 400);
+        return response()->json(['message' => 'Password set successfully !'], 200);
     }
 
     
