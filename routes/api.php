@@ -51,6 +51,7 @@ Route::group(['prefix' => 'user', 'middleware' => 'auth:sanctum'], function () {
   Route::put('change-password', [ApiAuthCTRL::class, 'changePassword'])->middleware(['throttle:5,1'])->name('user.password.change');
   Route::get('profile', [ApiAuthCTRL::class, 'user'])->name('user.profile');
   Route::put('profile', [ApiAuthCTRL::class, 'update'])->name('user.profile.update');
+  Route::post('/profile/picture', [ApiAuthCTRL::class, 'updateProfilePicture'])->name('user.profile.update.picture');
 });
 
 // Webhook 
@@ -62,14 +63,14 @@ Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handle']);
 // Route::group(['prefix' => 'category'], function () {
 //   Route::get('list', [ProductCategoryCTRL::class, 'index'])->middleware(['auth:sanctum'])->name('category.list');
 // });
-// Route::controller(AliExpressCTRL::class)
-//   // ->middleware(['auth:sanctum'])
-//   ->prefix('category')
-//   ->group(function () {
+Route::controller(AliExpressCTRL::class)
+  // ->middleware(['auth:sanctum'])
+  ->prefix('category')
+  ->group(function () {
 
-//     // List categories 
-//     Route::get('list', 'index')->name('category.list');
-// });
+    // List categories 
+    Route::get('list', 'index')->name('category.list');
+});
 
 
 

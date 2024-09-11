@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+// use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable // implements MustVerifyEmail
 {
@@ -23,8 +24,8 @@ class User extends Authenticatable // implements MustVerifyEmail
     protected $fillable = [
         'username', 'name', 'first_name', 'last_name', 'email', 
         'email_verification_code', 'email_verified_at', 'phone',
-        'phone_verification_code', 'phone_verified_at', 'gender', 
-        'date_of_birth', 'accept_terms', 'device_type', 'device_token',
+        'phone_verification_code', 'phone_verified_at', 'profile_picture', 
+        'gender', 'date_of_birth', 'accept_terms', 'device_type', 'device_token',
         'fcm_token', 'password',
     ];
 
@@ -58,10 +59,25 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'email_verified_at' => 'datetime',
+            'date_of_birth' => 'date',
+            'accept_terms' => 'boolean',
             'password' => 'hashed',
         ];
     }
 
+    /**
+     * Get the complete URL for the profile picture.
+     *
+     * @return string
+     */
+    protected function profilePicture(): Attribute
+    {
+        return Attribute::make(
+            get: fn (string $value) => url('/') .  $value,
+        );
+    }
+    
     public function hasVerifiedPhone()
     {
         return !is_null($this->phone_verified_at);

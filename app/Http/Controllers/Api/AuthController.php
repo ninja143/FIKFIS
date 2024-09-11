@@ -11,6 +11,7 @@ use App\Models\PasswordResetToken;
 # App Helpers
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -269,11 +270,12 @@ class AuthController extends Controller
 
             $accessToken = $user->createToken('access_token', [], $atExpireTime);
             $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
-
+            
             DB::commit();
             return response()->json([
                 'message' => 'logged-in successfully !',
                 'result' => [
+                    'profile' => $user->only(['username', 'name', 'email', 'phone', 'profile_picture']),
                     'access_token' => $accessToken->plainTextToken,
                     'refresh_token' => $refreshToken->plainTextToken,
                     'token_type' => 'Bearer'
@@ -347,6 +349,41 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'User updated successfully.',
             'user' => $user,
+        ]);
+    }
+
+    public function updateProfilePicture(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'profile_picture' => 'required|image|max:4096',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = auth()->user();
+        // Delete the previous profile picture if it exists
+        if ($user->profile_picture) {
+            $res = Storage::disk('public')->delete('/profile_pictures/'.basename($user->profile_picture));
+        }
+
+        // Upload the new profile picture
+        $imagePath = $request->file('profile_picture')->store('profile_pictures', 'public');
+
+        // Update the user's profile picture path
+        $user->profile_picture = Storage::url($imagePath);
+        // asset(),
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile picture updated successfully',
+            'result' => [
+                'profile_picture_url' => $user->profile_picture,
+            ]
         ]);
     }
 

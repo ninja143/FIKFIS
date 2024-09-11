@@ -25,7 +25,7 @@ use App\Constants\Constants;
 use App\Helpers\MyHelper;
 
 # Models
-// use App\Models\Otp;
+use App\Models\AEToken;
 
 # Service Provider
 // use App\Services\MailService;
@@ -38,10 +38,27 @@ use App\Helpers\MyHelper;
 class AliExpressController extends Controller
 {
 
+    protected  $mailService;
+    protected  $smsService;
+
+    public function __construct()
+    {
+        $latestRecord =  AEToken::latest()->first();
+        if ($latestRecord->isTokenExpired()) {
+            // Further logic valid
+        } else {
+            if (!$latestRecord->isAccessTokenExpired && $latestRecord->isRefreshTokenExpired) {
+                $this->generateTokens();
+            } else {
+                // Re-authorisation required 
+            }
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function generateTokens()
     {   
         // API request address
         $url = env('ALIEXPRESS_API_URL');
@@ -56,12 +73,41 @@ class AliExpressController extends Controller
         // Create an IopRequest object and pass in the API interface name and parameters
         $request = new AE_REQUEST($action);
         // $request->setApiName($action);
-        $request->addApiParam("code", "GENFIKFIS");
+        $request->addApiParam("code", env('ALIEXPRESS_API_CODE'));
 
         try {
             // Execute API request, using GOP protocol
             $response = $client->execute($request);
-            dd( $response);
+            Log::info(`AE Token Request: {$request}`);
+            Log::info(`AE Token Response: {$response}`);
+            // {
+            //     "refresh_token_valid_time": 1726167798000,
+            //     "havana_id": "3001192361513",
+            //     "expire_time": 1726081398000,
+            //     "locale": "zh_CN",
+            //     "user_nick": "uk3399472517mhmae",
+            //     "access_token": "50000700c14umY9mwordcyIwlp1ec42992yZyojXeEUdkzxfKmSk0gut9ikjP0OPHAZs",
+            //     "refresh_token": "50001701414dEpfsdjrdvoFZki1cd65cb9y3rr0diHyGvluvol5CtreKo1dMN7jAHq0h",
+            //     "user_id": "6072325717",
+            //     "account_platform": "buyerApp",
+            //     "refresh_expires_in": 172800,
+            //     "expires_in": 86400,
+            //     "sp": "ae",
+            //     "seller_id": "6072325717",
+            //     "account": "fikfis.co.uk@gmail.com",
+            //     "code": "0",
+            //     "request_id": "2101289517259949988748367"
+            // }
+
+            // Save this into the table
+            // Set cron for an hour that will check the expiry of the token 
+            // Get the new token again using refresh token and update in db
+            // Refresh token expiry will not be extended 
+            // Authorisation process will be repeated again to get the code 
+            // Once it is expired , Show in panel somewhere and automate the link in the same way 
+
+            //-- Authorisation link 
+            // 
 
             // Output the JSON string of the request response result
             return response()->json([
@@ -77,5 +123,9 @@ class AliExpressController extends Controller
         }
 
         
+    }
+
+    public static function generateAccessToken(){
+
     }
 }

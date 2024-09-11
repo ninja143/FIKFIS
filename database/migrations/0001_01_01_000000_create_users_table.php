@@ -21,6 +21,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('phone')->unique()->nullable();
             $table->timestamp('phone_verified_at')->nullable();
+            $table->string('profile_picture')->nullable()->after('phone_verified_at');
             $table->enum('gender', ['male', 'female', 'non-binary', 'other', 'prefer_not_to_say'])->nullable();
             $table->date('date_of_birth')->nullable();
             $table->boolean('accept_terms')->default(false);
