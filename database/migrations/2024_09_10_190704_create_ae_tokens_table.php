@@ -23,8 +23,8 @@ return new class extends Migration
             $table->string('seller_id');
             $table->text('access_token');
             $table->text('refresh_token');
-            $table->timestamp('expire_time');
-            $table->timestamp('refresh_expires_in');  // Renamed to singular for clarity
+            $table->timestamp('expire_time')->nullable();;
+            $table->timestamp('refresh_expires_in')->nullable();;  // Renamed to singular for clarity
             $table->bigInteger('refresh_token_valid_time');  // Assuming a large integer for timestamp
             $table->string('code');
             $table->string('request_id')->unique();
