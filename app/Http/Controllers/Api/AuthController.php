@@ -195,6 +195,24 @@ class AuthController extends Controller
                                 'message' => 'Successfully created user !',
                                 'result' => [
                                     'profile' => $user->only(['username', 'name', 'email', 'phone']),
+                                    'my_wishlist' => [
+                                        'products' => [], 
+                                        'size' => 10,
+                                        'page' => 1,
+                                        'sort' => 'product_id'
+                                    ],
+                                    'recent_orders' => [
+                                        'orders' => [], 
+                                        'size' => 10,
+                                        'page' => 1,
+                                        'sort' => 'order_id',
+                                    ],
+                                    'add_to_carts' => [
+                                        'products' => [], 
+                                        'size' => 10,
+                                        'page' => 1,
+                                        'sort' => 'order_id',
+                                    ],
                                     'access_token' => $accessToken,
                                     'refresh_token' => $refreshToken->plainTextToken,
                                     'token_type' => 'Bearer',
@@ -276,6 +294,24 @@ class AuthController extends Controller
                 'message' => 'logged-in successfully !',
                 'result' => [
                     'profile' => $user->only(['username', 'name', 'email', 'phone', 'profile_picture']),
+                    'my_wishlist' => [
+                        'products' => [], 
+                        'size' => 10,
+                        'page' => 1,
+                        'sort' => 'product_id'
+                    ],
+                    'recent_orders' => [
+                        'orders' => [], 
+                        'size' => 10,
+                        'page' => 1,
+                        'sort' => 'order_id',
+                    ],
+                    'add_to_carts' => [
+                        'products' => [], 
+                        'size' => 10,
+                        'page' => 1,
+                        'sort' => 'order_id',
+                    ],
                     'access_token' => $accessToken->plainTextToken,
                     'refresh_token' => $refreshToken->plainTextToken,
                     'token_type' => 'Bearer'
