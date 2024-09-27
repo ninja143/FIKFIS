@@ -4,16 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('ae_tokens', function (Blueprint $table) {
-            $table->id(); 
-            $table->string('havana_id')->unique();
+            $table->id();
+            $table->string('havana_id');
             $table->bigInteger('user_id');
             $table->string('user_nick');
             $table->string('account_platform');
@@ -23,9 +22,8 @@ return new class extends Migration
             $table->string('seller_id');
             $table->text('access_token');
             $table->text('refresh_token');
-            $table->timestamp('expire_time')->nullable();;
-            $table->timestamp('refresh_expires_in')->nullable();;  // Renamed to singular for clarity
-            $table->bigInteger('refresh_token_valid_time');  // Assuming a large integer for timestamp
+            $table->string('access_expires_in')->comment('access token expiry in seconds (remaining when created)');
+            $table->string('refresh_expires_in')->comment('refresh token expiry in seconds (remaining when created)');// Renamed to singular for clarity
             $table->string('code');
             $table->string('request_id')->unique();
             $table->timestamps();

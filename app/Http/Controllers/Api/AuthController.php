@@ -38,8 +38,8 @@ use App\Rules\ValidUsername;
 
 class AuthController extends Controller
 {
-    protected  $mailService;
-    protected  $smsService;
+    protected $mailService;
+    protected $smsService;
 
     public function __construct(MailService $mailService, SmsService $smsService)
     {
@@ -61,7 +61,7 @@ class AuthController extends Controller
             // Validate Inputs
             $validator = Validator::make($request->all(), [
                 'type' => 'required|in:email,phone',
-                'username' => [ 'required', new ValidUsername]
+                'username' => ['required', new ValidUsername]
             ]);
 
             if ($validator->fails()) {
@@ -73,10 +73,10 @@ class AuthController extends Controller
 
             // username check
             $isUsernameExist = $this->isUsernameExist($request->username);
-            if(!$isUsernameExist) {
+            if (!$isUsernameExist) {
                 // Generate OTP
-                $otp = MyHelper::generateOtp( env('OTP_STR_LENGTH', 6),  env('OTP_DIGITS_LENGTH', 6));
-                
+                $otp = MyHelper::generateOtp(env('OTP_STR_LENGTH', 6), env('OTP_DIGITS_LENGTH', 6));
+
                 // Send OTP
                 // if($request->type === Constants::CONTACT_TYPE_EMAIL) {
                 //     $result = $this->sendEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
@@ -89,16 +89,16 @@ class AuthController extends Controller
 
                 $setResult = [
                     'username' => $request->username,
-                    'expiry_time' => $result['status'] ? env('OTP_EXPITY_MINUTES', 10). ' minutes' : ''
+                    'expiry_time' => $result['status'] ? env('OTP_EXPITY_MINUTES', 10) . ' minutes' : ''
                 ];
-                if($result['status']) {
-                    return response()->json(['message' => 'OTP sent successfully.', 'result' => $setResult ], 201);
+                if ($result['status']) {
+                    return response()->json(['message' => 'OTP sent successfully.', 'result' => $setResult], 201);
                 } else {
-                    return response()->json(['message' => 'Unable to send otp. please contact admin.', 'result' => $setResult ], 201);
+                    return response()->json(['message' => 'Unable to send otp. please contact admin.', 'result' => $setResult], 201);
                 }
             } else {
                 return response()->json([
-                    'message' => 'Account alresy exists with this '.($request->type === Constants::CONTACT_TYPE_EMAIL? 'email':'phone'),
+                    'message' => 'Account alresy exists with this ' . ($request->type === Constants::CONTACT_TYPE_EMAIL ? 'email' : 'phone'),
                     'result' => $request->input()
                 ], 400);
             }
@@ -110,7 +110,7 @@ class AuthController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
-        
+
     }
 
     public function register(Request $request)
@@ -120,15 +120,15 @@ class AuthController extends Controller
             // Validate Inputs
             $validator = Validator::make($request->all(), [
                 'type' => 'required|in:email,phone',
-                'username' => ['required', new ValidUsername ],
+                'username' => ['required', new ValidUsername],
                 'otp' => 'required|string|digits:6',
                 'password' => [
-                                'required',
-                                'string',
-                                'min:8',
-                                'max:255',
-                                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
-                            ],
+                    'required',
+                    'string',
+                    'min:8',
+                    'max:255',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
+                ],
                 'device_type' => ['required', 'string', 'in:ios,android,web,other'],
                 'device_token' => 'string|max:255',
                 'fcm_token' => 'string|max:255'
@@ -143,7 +143,7 @@ class AuthController extends Controller
 
             // username check
             $isUsernameExist = $this->isUsernameExist($request->username);
-            if(!$isUsernameExist) {
+            if (!$isUsernameExist) {
                 // Verify OTP
                 // if($request->type === Constants::CONTACT_TYPE_EMAIL) {
                 //     $result = $this->verifyEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
@@ -155,12 +155,12 @@ class AuthController extends Controller
                 // }
                 $result['status'] = true;
                 $result['message'] = 'approved';
-                if($result['status'] == true || 1) {
-                    if($result['message'] == 'approved' || 1) {
+                if ($result['status'] == true || 1) {
+                    if ($result['message'] == 'approved' || 1) {
                         // return response()->json(['message' => 'OTP verified successfully.', ], 201);
                         $user = new User([
-                            'username'  => $request->username,
-                            'name'  => $request->name,
+                            'username' => $request->username,
+                            'name' => $request->name,
                             'email' => $request->type === Constants::CONTACT_TYPE_EMAIL ? $request->username : null,
                             'phone' => $request->type === Constants::CONTACT_TYPE_PHONE ? $request->username : null,
                             'password' => Hash::make($request->password),
@@ -169,16 +169,16 @@ class AuthController extends Controller
                             'fcm_token' => $request->fcm_token,
                         ]);
 
-                        if($request->type === Constants::CONTACT_TYPE_EMAIL) {
+                        if ($request->type === Constants::CONTACT_TYPE_EMAIL) {
                             $user->email_verified_at = Carbon::now();
                         }
 
-                        if($request->type === Constants::CONTACT_TYPE_PHONE) {
+                        if ($request->type === Constants::CONTACT_TYPE_PHONE) {
                             $user->phone_verified_at = Carbon::now();
                         }
-                        
+
                         if ($user->save()) {
-                            $user->update([ 'remember_token' =>$request->remember_me ]);
+                            $user->update(['remember_token' => $request->remember_me]);
 
                             // $tokenResult = $user->createToken('Personal Access Token For User');
                             $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
@@ -186,7 +186,7 @@ class AuthController extends Controller
 
                             $accessToken = $user->createToken('access_token', [], $atExpireTime);
                             $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
-                            
+
                             // Commit the transaction if all operations succeed
                             DB::commit();
 
@@ -196,19 +196,19 @@ class AuthController extends Controller
                                 'result' => [
                                     'profile' => $user->only(['username', 'name', 'email', 'phone']),
                                     'my_wishlist' => [
-                                        'products' => [], 
+                                        'products' => [],
                                         'size' => 10,
                                         'page' => 1,
                                         'sort' => 'product_id'
                                     ],
                                     'recent_orders' => [
-                                        'orders' => [], 
+                                        'orders' => [],
                                         'size' => 10,
                                         'page' => 1,
                                         'sort' => 'order_id',
                                     ],
                                     'add_to_carts' => [
-                                        'products' => [], 
+                                        'products' => [],
                                         'size' => 10,
                                         'page' => 1,
                                         'sort' => 'order_id',
@@ -227,26 +227,26 @@ class AuthController extends Controller
                 } else {
                     return response()->json(['message' => $result['message']], 400);
                 }
-                
+
             } else {
                 return response()->json([
-                    'message' => 'Account exists with this '.($request->type === Constants::CONTACT_TYPE_EMAIL? 'email':'phone'),
+                    'message' => 'Account exists with this ' . ($request->type === Constants::CONTACT_TYPE_EMAIL ? 'email' : 'phone'),
                     'result' => $request->input()
                 ], 400);
             }
 
         } catch (\Exception $e) {
             Log::error('Error: Failed to create user', ['error' => $e->getMessage()]);
-            
+
             DB::rollback();
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage()
             ], 500);
         }
-        
+
     }
-    
+
     /**
      * Login user and create token
      *
@@ -268,7 +268,7 @@ class AuthController extends Controller
             ]);
 
             $credentials = request(['username', 'password']);
-            
+
             if (!Auth::attempt($credentials)) {
                 return response()->json([
                     'message' => 'Unauthorized'
@@ -280,7 +280,7 @@ class AuthController extends Controller
             // $user = $request->user();
 
             // Update some fields in the user table
-            $user->update([ 'remember_token' =>$request->remember_me, "device_token" => $request->device_token ]);
+            $user->update(['remember_token' => $request->remember_me, "device_token" => $request->device_token]);
 
             // $tokenResult = $user->createToken('Personal Access Token For User');
             $atExpireTime = Carbon::now()->addMinutes(is_numeric(config('sanctum.expiry.access')) ? (int) config('sanctum.expiry.access') : 0);
@@ -288,26 +288,26 @@ class AuthController extends Controller
 
             $accessToken = $user->createToken('access_token', [], $atExpireTime);
             $refreshToken = $user->createToken('refresh_token', [], $rtExpireTime);
-            
+
             DB::commit();
             return response()->json([
                 'message' => 'logged-in successfully !',
                 'result' => [
                     'profile' => $user->only(['username', 'name', 'email', 'phone', 'profile_picture']),
                     'my_wishlist' => [
-                        'products' => [], 
+                        'products' => [],
                         'size' => 10,
                         'page' => 1,
                         'sort' => 'product_id'
                     ],
                     'recent_orders' => [
-                        'orders' => [], 
+                        'orders' => [],
                         'size' => 10,
                         'page' => 1,
                         'sort' => 'order_id',
                     ],
                     'add_to_carts' => [
-                        'products' => [], 
+                        'products' => [],
                         'size' => 10,
                         'page' => 1,
                         'sort' => 'order_id',
@@ -319,21 +319,21 @@ class AuthController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error: Failed to login', ['error' => $e->getMessage()]);
-            
+
             DB::rollback();
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage()
             ], 500);
         }
-            
+
     }
 
     /**
-        * Get the authenticated User
-        *
-        * @return [json] user object
-    */
+     * Get the authenticated User
+     *
+     * @return [json] user object
+     */
     public function user(Request $request)
     {
         return response()->json($request->user());
@@ -404,7 +404,7 @@ class AuthController extends Controller
         $user = auth()->user();
         // Delete the previous profile picture if it exists
         if ($user->profile_picture) {
-            $res = Storage::disk('public')->delete('/profile_pictures/'.basename($user->profile_picture));
+            $res = Storage::disk('public')->delete('/profile_pictures/' . basename($user->profile_picture));
         }
 
         // Upload the new profile picture
@@ -423,15 +423,16 @@ class AuthController extends Controller
         ]);
     }
 
-    public function isUsernameExist($username): bool {
-        return User::where('username', $username)->count() > 0 ? true : false; 
+    public function isUsernameExist($username): bool
+    {
+        return User::where('username', $username)->count() > 0 ? true : false;
     }
 
     /**
-        * Logout user (Invoke the token)
-        *
-        * @return [string] message
-    */
+     * Logout user (Invoke the token)
+     *
+     * @return [string] message
+     */
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();
@@ -447,7 +448,7 @@ class AuthController extends Controller
         try {
             // OTP Expiry
             $expiresAt = Carbon::now()->addMinutes(is_numeric($expiryMinutes) ? (int) $expiryMinutes : 0); // OTP expiry time
-            
+
             // Save OTP
             $otp = new Otp([
                 // 'otp' => implode("-", $otp),
@@ -460,14 +461,14 @@ class AuthController extends Controller
 
             // Send OTP
             // Send OTP
-            if($otp->save()) {
-                $this->mailService->sendOtp($email,  $otp['otp']);
-                return [ 'status' => true, 'otp' => $otp ];              
+            if ($otp->save()) {
+                $this->mailService->sendOtp($email, $otp['otp']);
+                return ['status' => true, 'otp' => $otp];
             } else {
-                return [ 'status' => false, 'otp' => [] ]; 
+                return ['status' => false, 'otp' => []];
             }
         } catch (\Exception $e) {
-            return [ 'status' => false, 'message' => $e->getMessage(), 'otp' => [] ]; 
+            return ['status' => false, 'message' => $e->getMessage(), 'otp' => []];
         }
     }
 
@@ -510,33 +511,35 @@ class AuthController extends Controller
                 return [ 'status' => false, 'message' => $e->getMessage(), 'otp' => [] ]; 
             }
         */
-        
+
         try {
             // Send OTP
             // $result = $this->smsService->sendOtp($phone);
-            return [ 'status' => true, 'message' => "Please enter 123456" ];     
-        } catch (Exception $e) { 
-            return [ 'status' => false, 'message' => $e->getMessage(), 'otp' => [] ]; 
+            return ['status' => true, 'message' => "Please enter 123456"];
+        } catch (Exception $e) {
+            return ['status' => false, 'message' => $e->getMessage(), 'otp' => []];
         }
     }
 
-    private function verifyPhoneOtp($phone, $otp) {
+    private function verifyPhoneOtp($phone, $otp)
+    {
         try {
             // Send OTP
             $result = $this->smsService->verifyOtp($phone, $otp);
-            return [ 'status' => true, 'message' => $result ];     
+            return ['status' => true, 'message' => $result];
         } catch (Exception $e) {
-            return [ 'status' => false, 'message' => $e->getMessage(), 'otp' => [] ]; 
+            return ['status' => false, 'message' => $e->getMessage(), 'otp' => []];
         }
     }
 
-    public function sendPasswordOTP(Request $request){
+    public function sendPasswordOTP(Request $request)
+    {
         DB::beginTransaction();
         try {
             // Validate Inputs
             $validator = Validator::make($request->all(), [
                 'type' => 'required|in:email,phone',
-                'username' => [ 'required', new ValidUsername]
+                'username' => ['required', new ValidUsername]
             ]);
 
             if ($validator->fails()) {
@@ -548,31 +551,31 @@ class AuthController extends Controller
 
             // username check
             $isUsernameExist = $this->isUsernameExist($request->username);
-            if($isUsernameExist) {
+            if ($isUsernameExist) {
                 // Generate OTP
-                $otp = MyHelper::generateOtp( env('OTP_STR_LENGTH', 6),  env('OTP_DIGITS_LENGTH', 6));
-                
+                $otp = MyHelper::generateOtp(env('OTP_STR_LENGTH', 6), env('OTP_DIGITS_LENGTH', 6));
+
                 // Send OTP
-                if($request->type === Constants::CONTACT_TYPE_EMAIL) {
+                if ($request->type === Constants::CONTACT_TYPE_EMAIL) {
                     $result = $this->sendEmailOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
                 }
 
-                if($request->type === Constants::CONTACT_TYPE_PHONE) {
+                if ($request->type === Constants::CONTACT_TYPE_PHONE) {
                     $result = $this->sendPhoneOtp($request->username, $otp, env('OTP_EXPITY_MINUTES', 10));
                 }
 
                 $setResult = [
                     'username' => $request->username,
-                    'expiry_time' => $result['status'] ? env('OTP_EXPITY_MINUTES', 10). ' minutes' : ''
+                    'expiry_time' => $result['status'] ? env('OTP_EXPITY_MINUTES', 10) . ' minutes' : ''
                 ];
-                if($result['status']) {
-                    return response()->json(['message' => 'OTP sent successfully.', 'result' => $setResult ], 201);
+                if ($result['status']) {
+                    return response()->json(['message' => 'OTP sent successfully.', 'result' => $setResult], 201);
                 } else {
-                    return response()->json(['message' => 'Unable to send otp. please contact admin.', 'result' => $setResult ], 201);
+                    return response()->json(['message' => 'Unable to send otp. please contact admin.', 'result' => $setResult], 201);
                 }
             } else {
                 return response()->json([
-                    'message' => 'Account does not exist with this '.($request->type === Constants::CONTACT_TYPE_EMAIL? 'email':'phone'),
+                    'message' => 'Account does not exist with this ' . ($request->type === Constants::CONTACT_TYPE_EMAIL ? 'email' : 'phone'),
                     'result' => $request->input()
                 ], 400);
             }
@@ -586,18 +589,19 @@ class AuthController extends Controller
         }
     }
 
-    public function changePassword(Request $request){
+    public function changePassword(Request $request)
+    {
         DB::beginTransaction();
         try {
             // Validate Inputs
             $validator = Validator::make($request->all(), [
                 'password' => [
-                                'required',
-                                'string',
-                                'min:8',
-                                'max:255',
-                                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
-                            ]
+                    'required',
+                    'string',
+                    'min:8',
+                    'max:255',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
+                ]
             ]);
 
             if ($validator->fails()) {
@@ -612,9 +616,9 @@ class AuthController extends Controller
             $user->updatePassword($request->password);
 
             DB::commit();
-            return response()->json(['message' => 'Password changed successfully.', 'result' => [] ], 200);
+            return response()->json(['message' => 'Password changed successfully.', 'result' => []], 200);
 
-            
+
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
@@ -624,14 +628,15 @@ class AuthController extends Controller
         }
     }
 
-    public function refreshToken(Request $request) {
+    public function refreshToken(Request $request)
+    {
         // Validate Inputs
         $validator = Validator::make($request->all(), [
             'refresh_token' => ['required', 'string', 'min:48', 'max:50']
         ]);
 
         if ($validator->fails()) {
-            return response()->json([ 'status' => 'error', 'message' => $validator->errors() ], 422);
+            return response()->json(['status' => 'error', 'message' => $validator->errors()], 422);
         }
 
         // $token = '3|ozN4wlvYfj0rrtijDzst55ZYX2Lxf1zJXUeQNLjWb0147a94';
@@ -640,7 +645,7 @@ class AuthController extends Controller
 
         $refreshToken = $request->input('refresh_token');
         $token = PersonalAccessToken::findToken($refreshToken);
-        if($token && !$token->expires_at->isPast()) {
+        if ($token && !$token->expires_at->isPast()) {
             $user = $token->tokenable;
 
             // Revoke the old refresh token to prevent its reuse
@@ -663,7 +668,7 @@ class AuthController extends Controller
                 'error' => 'Token is expired !',
             ], 422);
         }
-        
+
 
         return response()->json(['error' => 'Invalid refresh token'], 401);
     }

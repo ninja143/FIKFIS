@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 
 namespace App\Models;
@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
-class AEToken extends Model
+class AeToken extends Model
 {
     use HasFactory;
 
@@ -22,35 +22,34 @@ class AEToken extends Model
         'seller_id',
         'access_token',
         'refresh_token',
-        'expire_time',
-        'refresh_expire_in',
-        'refresh_token_valid_time',
+        'access_expires_in',
+        'refresh_expires_in',
         'code',
-        'request_id',
+        'request_id'
+    ];
+
+    protected $casts = [
+        'user_id' => 'integer',
+        'access_expires_in' => 'integer',
+        'refresh_expires_in' => 'integer',
+        'seller_id' => 'integer',
     ];
 
     public function isAccessTokenExpired()
-    {   
-        /*
-            // Convert 'expires_in' to seconds
-            $expiresInSeconds = $this->expires_in;
-
-            // Calculate the expiration timestamp
-            $expirationTimestamp = $this->created_at->timestamp + $expiresInSeconds;
-
-            // Compare with current time
-            return now()->timestamp > $expirationTimestamp;
-        **/
-
+    {
+        $remaining_time_sec = $this->access_expires_in - env('ALIEXPRESS_TOKEN_EARLY_EXPIRY', 1800);
         // Calculate the expiration timestamp
-        $expirationTimestamp = Carbon::createFromTimestamp($this->created_at->timestamp)->addSeconds($this->expires_in)->timestamp;
+        $expirationTimestamp = Carbon::createFromTimestamp($this->created_at->timestamp)
+            ->addSeconds($remaining_time_sec)
+            ->timestamp;
 
         // Compare with current time
         return Carbon::now()->timestamp > $expirationTimestamp;
     }
 
     public function isRefreshTokenExpired()
-    {   
+    {
+        $remaining_time_sec = $this->refresh_expires_in - env('ALIEXPRESS_TOKEN_EARLY_EXPIRY', 1800);
         // Calculate the expiration timestamp
         $expirationTimestamp = Carbon::createFromTimestamp($this->created_at->timestamp)->addSeconds($this->refresh_expires_in)->timestamp;
 
@@ -59,13 +58,18 @@ class AEToken extends Model
     }
 
     public function isTokenExpired()
-    {   
-        if($this->isAccessTokenExpired() && $this->isRefreshTokenExpired()) {
+    {
+        if ($this->isAccessTokenExpired() && $this->isRefreshTokenExpired()) {
             return true;
-        } else if(!$this->isAccessTokenExpired() && $this->isRefreshTokenExpired()) {
-            return false;
+        } else if (!$this->isAccessTokenExpired() && $this->isRefreshTokenExpired()) {
+            return true;
         } else {
             return false;
         }
+    }
+
+    public function getAccessToken()
+    {
+        return $this->access_token;
     }
 }

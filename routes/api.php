@@ -26,24 +26,24 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 // // OTP
 // Route::middleware([ApiAuthMiddleware::class])->group(function () {
 //   Route::post('check-username', [OtpController::class, 'isUsernameExist'])->name('username.check');
-  
+
 // });
 
 # Auth Api
 Route::group(['prefix' => 'auth'], function () {
-    // Route::post('login', [ApiAuthCTRL::class, 'login'])->withoutMiddleware([EnsureEmailIsVerified::class]);
-    Route::post('login', [ApiAuthCTRL::class, 'login'])->withoutMiddleware([EnsureEmailIsVerified::class]);
-    Route::post('refresh-token', [ApiAuthCTRL::class, 'refreshToken'])->name('token.refresh');
-    Route::post('register-otp', [ApiAuthCTRL::class, 'registerOtp'])->name('user.register.otp');
-    Route::post('register', [ApiAuthCTRL::class, 'register'])->name('user.register');
+  // Route::post('login', [ApiAuthCTRL::class, 'login'])->withoutMiddleware([EnsureEmailIsVerified::class]);
+  Route::post('login', [ApiAuthCTRL::class, 'login'])->withoutMiddleware([EnsureEmailIsVerified::class]);
+  Route::post('refresh-token', [ApiAuthCTRL::class, 'refreshToken'])->name('token.refresh');
+  Route::post('register-otp', [ApiAuthCTRL::class, 'registerOtp'])->name('user.register.otp');
+  Route::post('register', [ApiAuthCTRL::class, 'register'])->name('user.register');
 
-    Route::post('forget-password-otp', [OtpController::class, 'sendOtp'])->middleware(['throttle:3,5'])->name('user.forget.password.otp.send');
-    Route::post('verify-paasword-otp', [OtpController::class, 'verifyOtp'])->name('user.forget.password.otp.verify');
-    Route::post('forget-password', [OtpController::class, 'changePassword'])->name('user.forget.password.reset');
+  Route::post('forget-password-otp', [OtpController::class, 'sendOtp'])->middleware(['throttle:3,5'])->name('user.forget.password.otp.send');
+  Route::post('verify-paasword-otp', [OtpController::class, 'verifyOtp'])->name('user.forget.password.otp.verify');
+  Route::post('forget-password', [OtpController::class, 'changePassword'])->name('user.forget.password.reset');
 
-    Route::group(['middleware' => 'auth:sanctum'], function() {
-      Route::get('logout', [ApiAuthCTRL::class, 'logout'])->name('user.logout');
-    });
+  Route::group(['middleware' => 'auth:sanctum'], function () {
+    Route::get('logout', [ApiAuthCTRL::class, 'logout'])->name('user.logout');
+  });
 });
 
 # User Routes 
@@ -59,18 +59,25 @@ Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handle']);
 
 
 
-# category Routes  
-// Route::group(['prefix' => 'category'], function () {
-//   Route::get('list', [ProductCategoryCTRL::class, 'index'])->middleware(['auth:sanctum'])->name('category.list');
-// });
+Route::controller(AliExpressCTRL::class)
+  ->prefix('ae')
+  ->group(function () {
+
+    Route::get('insert-token', 'insertToken')->name('aliexpress.token.insert');
+    Route::get('get-ds-feed-itemids', 'getDsFeedItemIds')->name('aliexpress.ds.feed.itemids.get');
+    Route::get('ds-text-search', 'dsTextSearch')->name('aliexpress.ds.text.search');
+  });
+
 Route::controller(AliExpressCTRL::class)
   // ->middleware(['auth:sanctum'])
   ->prefix('category')
   ->group(function () {
 
+    // generate token
+    Route::get('get-ds-feed-itemids', 'getDsFeedItemIds')->name('aliexpress.ds.feed.itemids.get');
     // List categories 
     Route::get('list', 'index')->name('category.list');
-});
+  });
 
 
 
