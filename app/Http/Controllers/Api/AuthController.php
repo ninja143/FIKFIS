@@ -317,7 +317,7 @@ class AuthController extends Controller
                     'token_type' => 'Bearer'
                 ]
             ]);
-        } catch (\Throwable $th) {
+        } catch (\Exception $e) {
             Log::error('Error: Failed to login', ['error' => $e->getMessage()]);
             
             DB::rollback();
