@@ -41,16 +41,22 @@ class AliExpressController extends Controller
     protected  $mailService;
     protected  $smsService;
 
+    // https://api-sg.aliexpress.com/oauth/authorize?response_type=code&force_auth=true&redirect_uri=https://api.fikfis.co.uk/api/webhook&client_id=509370
     public function __construct()
     {
         $latestRecord =  AEToken::latest()->first();
-        if ($latestRecord->isTokenExpired()) {
-            // Further logic valid
+        if(!$latestRecord) {
+            $this->generateTokens();
+            // https://api-sg.aliexpress.com/oauth/authorize?response_type=code&force_auth=true&redirect_uri=https://api.fikfis.co.uk/api/webhook&client_id=509370
         } else {
-            if (!$latestRecord->isAccessTokenExpired && $latestRecord->isRefreshTokenExpired) {
-                $this->generateTokens();
+            if ($latestRecord->isTokenExpired()) {
+                // Further logic valid
             } else {
-                // Re-authorisation required 
+                if (!$latestRecord->isAccessTokenExpired && $latestRecord->isRefreshTokenExpired) {
+                    $this->generateTokens();
+                } else {
+                    // Re-authorisation required 
+                }
             }
         }
     }
@@ -80,6 +86,9 @@ class AliExpressController extends Controller
             $response = $client->execute($request);
             Log::info(`AE Token Request: {$request}`);
             Log::info(`AE Token Response: {$response}`);
+            print_r($response);
+            $record = AEToken::create($response->all());
+            dd($record);
             // {
             //     "refresh_token_valid_time": 1726167798000,
             //     "havana_id": "3001192361513",

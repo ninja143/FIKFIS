@@ -10,6 +10,7 @@ class WebhookController extends Controller
 {
     public function handle(Request $request)
     {
+        // https://api-sg.aliexpress.com/oauth/authorize?response_type=code&force_auth=true&redirect_uri=https://api.fikfis.co.uk/api/webhook&client_id=509370
         // $secretToken = config('services.webhook.secret'); // Store this in your config or .env file
         // $incomingToken = $request->header('X-Webhook-Token');
 
